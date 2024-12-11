@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:function_tree/function_tree.dart';
 
-//--------------------------IM-2021-050
+//--------------------------IM-2021-050---------------------------------------------------
 // A provider class to handle calculator logic and notify listeners (UI) when changes occur.
 class CalculatorProvider extends ChangeNotifier {
   // A controller to manage the input and output text in the calculator's TextField.
   final TextEditingController compController = TextEditingController();
   int openBracketCount = 0; // Tracks unmatched '('
+  bool done = false;
 
-// Function to update the value displayed in the TextField based on button pressed.
   setValue(String value) {
+    // If a result was displayed and a new button is pressed, clear the input and reset `done`
+    if (done) {
+      compController.clear();// Reset to allow normal behavior after clearing
+      done = false;  
+    }
+
     // Get the current text from the TextField
     String str = compController.text;
 
@@ -33,6 +39,9 @@ class CalculatorProvider extends ChangeNotifier {
           if (str.endsWith("(")) openBracketCount--;
           if (str.endsWith(")")) openBracketCount++;
           compController.text = str.substring(0, str.length - 1);
+        }
+        if (done) {
+          compController.clear();
         }
         break;
 
@@ -87,7 +96,7 @@ class CalculatorProvider extends ChangeNotifier {
           compController.text += "sqrt("; // Start a square root operation
         } else {
           // Automatically insert multiplication if there's a number before '√'
-          compController.text += "*sqrt(";
+          compController.text += "sqrt(";
         }
         break;
 
@@ -184,11 +193,12 @@ class CalculatorProvider extends ChangeNotifier {
         openBracketCount--;
       }
 
-      // Check for division by zero
-      if (text.contains("/0")) {
-        compController.text = "Error";
-        return;
-      }
+      // Check for any zero divisions (both integer and floating-point)
+      final regexDivByZero = RegExp(r'\/\s*0+(\.0+)?(?!\d)');
+      if (regexDivByZero.hasMatch(text)) {
+       compController.text = "Error";
+       return;
+    }
 
       // Handle percentage: Replace `number%` with `(number / 100)`
       final regexPercent = RegExp(r'(\d+)%');
@@ -209,9 +219,11 @@ class CalculatorProvider extends ChangeNotifier {
       if (result == result.toInt()) {
         // If the result is a whole number, display it as a decimal with one zero
         resultStr = result.toStringAsFixed(1);
+        done = true;
       } else {
         // Otherwise, display up to 10 decimal places
         resultStr = result.toStringAsFixed(10);
+        done = true;
       }
 
       compController.text = resultStr;
